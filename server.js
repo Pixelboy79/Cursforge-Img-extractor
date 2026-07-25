@@ -11,14 +11,25 @@ app.post("/extract", async (req, res) => {
 
     const { url } = req.body;
 
-    if (!url)
-        return res.status(400).json({ error: "URL required" });
+    if (!url) {
+        return res.status(400).json({
+            success: false,
+            error: "URL required"
+        });
+    }
 
-    const browser = await chromium.launch({
-        headless: true
-    });
+    let browser;
 
     try {
+
+        browser = await chromium.launch({
+            headless: true,
+            args: [
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage"
+            ]
+        });
 
         const page = await browser.newPage();
 
@@ -27,7 +38,7 @@ app.post("/extract", async (req, res) => {
             timeout: 60000
         });
 
-        // Wait a little for lazy-loaded images
+        // Give lazy-loaded images time to appear
         await page.waitForTimeout(3000);
 
         const images = await page.evaluate(() => {
@@ -40,7 +51,7 @@ app.post("/extract", async (req, res) => {
 
         });
 
-        res.json({
+        return res.json({
             success: true,
             count: images.length,
             images
@@ -48,19 +59,33 @@ app.post("/extract", async (req, res) => {
 
     } catch (e) {
 
-        res.status(500).json({
+        console.error(e);
+
+        return res.status(500).json({
             success: false,
             error: e.message
         });
 
     } finally {
 
-        await browser.close();
+        if (browser) {
+            await browser.close();
+        }
 
     }
 
 });
 
-app.listen(process.env.PORT || 3000, () => {
-    console.log("Running...");
+app.get("/", (req, res) => {
+    res.json({
+        status: "Online",
+        message: "CurseForge Image Extractor API",
+        endpoint: "POST /extract"
+    });
+});
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
