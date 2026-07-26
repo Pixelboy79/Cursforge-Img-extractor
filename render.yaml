@@ -1,5 +1,0 @@
-services:
-  - type: web
-    runtime: docker
-    name: curseforge-img-extractor
-    plan: free
