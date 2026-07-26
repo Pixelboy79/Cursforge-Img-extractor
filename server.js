@@ -61,6 +61,15 @@ app.post("/extract", async (req, res) => {
     waitUntil: "domcontentloaded",
     timeout: 60000
 });
+        console.log("URL:", page.url());
+console.log("Title:", await page.title());
+
+await page.screenshot({
+    path: "debug.png",
+    fullPage: true
+});
+
+console.log(await page.content());
 await page.waitForSelector("img", {
     timeout: 30000
 });
