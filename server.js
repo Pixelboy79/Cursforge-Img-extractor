@@ -7,6 +7,25 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Home
+app.get("/", (req, res) => {
+    res.json({
+        success: true,
+        status: "Online",
+        service: "CurseForge Screenshot Extractor",
+        endpoint: "POST /extract"
+    });
+});
+
+// Health Check
+app.get("/health", (req, res) => {
+    res.json({
+        success: true,
+        status: "healthy"
+    });
+});
+
+// Extract Screenshots
 app.post("/extract", async (req, res) => {
 
     const { url } = req.body;
@@ -14,7 +33,7 @@ app.post("/extract", async (req, res) => {
     if (!url) {
         return res.status(400).json({
             success: false,
-            error: "URL required"
+            error: "URL is required"
         });
     }
 
@@ -31,39 +50,110 @@ app.post("/extract", async (req, res) => {
             ]
         });
 
-        const page = await browser.newPage();
+        const page = await browser.newPage({
+            viewport: {
+                width: 1366,
+                height: 768
+            }
+        });
 
         await page.goto(url, {
             waitUntil: "networkidle",
             timeout: 60000
         });
 
-        // Give lazy-loaded images time to appear
-        await page.waitForTimeout(3000);
+        // Allow lazy-loaded images to appear
+        await page.waitForTimeout(2000);
 
-        const images = await page.evaluate(() => {
+        // Scroll to bottom once
+        await page.evaluate(async () => {
+            await new Promise(resolve => {
 
-            return [...new Set(
-                [...document.querySelectorAll("img")]
-                    .map(img => img.src)
-                    .filter(Boolean)
-            )];
+                let totalHeight = 0;
+                const distance = 800;
+
+                const timer = setInterval(() => {
+
+                    window.scrollBy(0, distance);
+                    totalHeight += distance;
+
+                    if (totalHeight >= document.body.scrollHeight) {
+                        clearInterval(timer);
+                        resolve();
+                    }
+
+                }, 200);
+
+            });
+        });
+
+        await page.waitForTimeout(1500);
+
+        const screenshots = await page.evaluate(() => {
+
+            const urls = new Set();
+
+            // IMG tags
+            document.querySelectorAll("img").forEach(img => {
+
+                const src = img.currentSrc || img.src;
+
+                if (
+                    src &&
+                    src.includes("https://media.forgecdn.net/attachments/")
+                ) {
+                    urls.add(src.split("?")[0]);
+                }
+
+            });
+
+            // Preloaded images
+            document.querySelectorAll('link[rel="preload"][as="image"]').forEach(link => {
+
+                const href = link.href;
+
+                if (
+                    href &&
+                    href.includes("https://media.forgecdn.net/attachments/")
+                ) {
+                    urls.add(href.split("?")[0]);
+                }
+
+            });
+
+            // Direct links
+            document.querySelectorAll("a").forEach(a => {
+
+                const href = a.href;
+
+                if (
+                    href &&
+                    href.includes("https://media.forgecdn.net/attachments/")
+                ) {
+                    urls.add(href.split("?")[0]);
+                }
+
+            });
+
+            return Array.from(urls);
 
         });
+
+        screenshots.sort();
 
         return res.json({
             success: true,
-            count: images.length,
-            images
+            count: screenshots.length,
+            screenshots
         });
 
-    } catch (e) {
+    } catch (err) {
 
-        console.error(e);
+        console.error(err);
 
         return res.status(500).json({
             success: false,
-            error: e.message
+            error: err.message
         });
 
     } finally {
@@ -76,15 +166,7 @@ app.post("/extract", async (req, res) => {
 
 });
 
-app.get("/", (req, res) => {
-    res.json({
-        status: "Online",
-        message: "CurseForge Image Extractor API",
-        endpoint: "POST /extract"
-    });
-});
-
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
