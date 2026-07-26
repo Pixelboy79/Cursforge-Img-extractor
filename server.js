@@ -58,12 +58,15 @@ app.post("/extract", async (req, res) => {
         });
 
         await page.goto(url, {
-            waitUntil: "networkidle",
-            timeout: 60000
-        });
+    waitUntil: "domcontentloaded",
+    timeout: 60000
+});
+await page.waitForSelector("img", {
+    timeout: 30000
+});
 
         // Allow lazy-loaded images to appear
-        await page.waitForTimeout(2000);
+       await page.waitForTimeout(2000);
 
         // Scroll to bottom once
         await page.evaluate(async () => {
