@@ -33,7 +33,11 @@ const file=document.getElementById("file"),json=document.getElementById("json"),
 file.onchange=()=>{const r=new FileReader();r.onload=e=>{document.getElementById("source").value=e.target.result;extract(e.target.result)};r.readAsText(file.files[0]);};
 function extract(text){
 const matches=text.match(/https:\/\/media\.forgecdn\.net\/attachments\/[^"'<>\s]+/g)||[];
-const urls=[...new Set(matches.map(v=>v.split("?")[0]))];
+const urls = [...new Set(
+    matches
+        .filter(v => !v.endsWith("\\")) // Skip URLs ending with '\'
+        .map(v => v.split("?")[0])
+)];
 stats.innerHTML=`Found <b>${urls.length}</b> attachment URLs`;
 json.value=JSON.stringify({success:true,count:urls.length,screenshots:urls},null,2);
 gallery.innerHTML="";
