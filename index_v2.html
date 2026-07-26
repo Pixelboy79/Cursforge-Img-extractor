@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CurseForge Attachment Extractor</title>
+<style>
+body{margin:0;background:#0f172a;color:#fff;font-family:Arial}.wrap{max-width:1100px;margin:auto;padding:20px}
+.panel{background:#1e293b;padding:20px;border-radius:10px;margin:15px 0}
+textarea{width:100%;height:180px;background:#111827;color:#7CFC98;border:none;border-radius:8px;padding:10px}
+#source{height:220px;color:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:15px;margin-top:20px}
+.card{background:#243041;border-radius:8px;overflow:hidden}.card img{width:100%;height:150px;object-fit:cover}.card a{display:block;padding:6px;color:#7fb3ff;font-size:11px;word-break:break-all}
+button,label{display:inline-block;padding:10px 16px;background:#2563eb;color:#fff;border-radius:8px;cursor:pointer;border:none;margin:6px}input{display:none}
+</style></head><body><div class="wrap">
+<h1>CurseForge Attachment Extractor</h1>
+<div class="panel">
+<label for="file">Open HTML File</label><input id="file" type="file" accept=".html,.htm">
+<button onclick="extract(document.getElementById('source').value)">Extract From Pasted Source</button>
+<div id="stats">Ready</div>
+</div>
+<div class="panel">
+<h3>Paste Ctrl+U Source</h3>
+<textarea id="source" placeholder="Paste the entire HTML source here..."></textarea>
+</div>
+<div class="panel">
+<h3>JSON Output</h3>
+<textarea id="json" readonly></textarea><br>
+<button onclick="navigator.clipboard.writeText(json.value)">Copy JSON</button>
+<button onclick="download()">Download JSON</button>
+</div>
+<div id="gallery" class="grid"></div>
+</div>
+<script>
+const file=document.getElementById("file"),json=document.getElementById("json"),gallery=document.getElementById("gallery"),stats=document.getElementById("stats");
+file.onchange=()=>{const r=new FileReader();r.onload=e=>{document.getElementById("source").value=e.target.result;extract(e.target.result)};r.readAsText(file.files[0]);};
+function extract(text){
+const matches=text.match(/https:\/\/media\.forgecdn\.net\/attachments\/[^"'<>\s]+/g)||[];
+const urls=[...new Set(matches.map(v=>v.split("?")[0]))];
+stats.innerHTML=`Found <b>${urls.length}</b> attachment URLs`;
+json.value=JSON.stringify({success:true,count:urls.length,screenshots:urls},null,2);
+gallery.innerHTML="";
+urls.forEach(u=>{gallery.innerHTML+=`<div class="card"><img loading="lazy" src="${u}"><a href="${u}" target="_blank">${u}</a></div>`;});
+}
+function download(){const b=new Blob([json.value],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="screenshots.json";a.click();URL.revokeObjectURL(a.href);}
+</script></body></html>
